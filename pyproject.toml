@@ -1,0 +1,57 @@
+[project]
+name = "gh-trend-reporter"
+version = "0.1.0"
+description = "GitHub Trending リポジトリを自動収集し、技術トレンドを分析・分類して日本語の週次レポートを Markdown で出力する CLI ツール"
+readme = "README.md"
+authors = [
+    { name = "Ryo Matsukawa", email = "76232929+ryo-manba@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.27",
+    "beautifulsoup4>=4.12",
+    "click>=8.1",
+    "pydantic>=2.0",
+]
+
+[project.scripts]
+gtr = "gh_trend_reporter.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.0,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-httpx>=0.34",
+    "respx>=0.22",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+plugins = ["pydantic.mypy"]
+
+[tool.gh-trend-reporter]
+db_path = "./data/trends.db"
+reports_dir = "./reports"
+collect_interval = 2.0
+github_cache_ttl = 86400
+agent_max_turns = 10
