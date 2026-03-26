@@ -1,0 +1,50 @@
+{
+  "id": 741653159,
+  "node_id": "R_kgDOLMJBNw",
+  "name": "gemma",
+  "full_name": "google/gemma",
+  "private": false,
+  "owner": {
+    "login": "google",
+    "id": 1342004,
+    "avatar_url": "https://avatars.githubusercontent.com/u/1342004?v=4",
+    "type": "Organization"
+  },
+  "html_url": "https://github.com/google/gemma",
+  "description": "Open weights LLM",
+  "fork": false,
+  "url": "https://api.github.com/repos/google/gemma",
+  "created_at": "2024-02-15T00:00:00Z",
+  "updated_at": "2026-03-27T12:00:00Z",
+  "pushed_at": "2026-03-26T18:30:00Z",
+  "homepage": "https://ai.google.dev/gemma",
+  "size": 54210,
+  "stargazers_count": 50000,
+  "watchers_count": 50000,
+  "language": "Python",
+  "forks_count": 3000,
+  "open_issues_count": 142,
+  "default_branch": "main",
+  "topics": [
+    "llm",
+    "machine-learning",
+    "deep-learning",
+    "transformers",
+    "google",
+    "language-model",
+    "open-weights"
+  ],
+  "license": {
+    "key": "apache-2.0",
+    "name": "Apache License 2.0",
+    "spdx_id": "Apache-2.0",
+    "url": "https://api.github.com/licenses/apache-2.0",
+    "node_id": "MDc6TGljZW5zZTI="
+  },
+  "visibility": "public",
+  "forks": 3000,
+  "open_issues": 142,
+  "watchers": 50000,
+  "network_count": 3000,
+  "subscribers_count": 385
+}

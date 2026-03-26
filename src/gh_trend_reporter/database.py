@@ -105,7 +105,8 @@ class Database:
             cursor = self.conn.execute(
                 """
                 INSERT OR IGNORE INTO trending_repos
-                    (owner, name, description, language, stars, stars_since, forks, since, collected_at)
+                    (owner, name, description, language, stars,
+                     stars_since, forks, since, collected_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (

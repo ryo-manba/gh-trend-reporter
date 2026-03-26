@@ -86,7 +86,9 @@ class TrendingScraper:
         raise ScraperError(f"Failed after {self._max_retries} retries: {last_error}")
 
     @staticmethod
-    def parse_trending_page(html: str, since: str, collected_at: date | None = None) -> list[TrendingRepo]:
+    def parse_trending_page(
+        html: str, since: str, collected_at: date | None = None
+    ) -> list[TrendingRepo]:
         """HTML をパースして TrendingRepo のリストを返す"""
         if collected_at is None:
             collected_at = date.today()
