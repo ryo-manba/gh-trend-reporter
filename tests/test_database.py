@@ -42,9 +42,7 @@ class TestDatabase:
 
     def test_create_tables(self, db: Database) -> None:
         """テーブルが正しく作成される"""
-        tables = db.conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()
+        tables = db.conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
         table_names = {row["name"] for row in tables}
         assert "trending_repos" in table_names
         assert "repo_details" in table_names

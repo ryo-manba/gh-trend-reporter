@@ -110,9 +110,7 @@ class TestAnalysisAgent:
 
         await agent.run_agent(week_label)
 
-        detail_calls = [
-            fc for fc in agent.function_call_log if fc["name"] == "get_repo_detail"
-        ]
+        detail_calls = [fc for fc in agent.function_call_log if fc["name"] == "get_repo_detail"]
         assert len(detail_calls) >= 1
 
     async def test_agent_compares_with_previous_week(
@@ -126,9 +124,7 @@ class TestAnalysisAgent:
 
         responses = [
             make_mock_genai_response(
-                function_calls=[
-                    {"name": "get_previous_week_trending", "args": {"weeks_ago": 1}}
-                ]
+                function_calls=[{"name": "get_previous_week_trending", "args": {"weeks_ago": 1}}]
             ),
             make_mock_genai_response(text=json.dumps(MOCK_ANALYSIS_OUTPUT)),
         ]
@@ -182,9 +178,7 @@ class TestAnalysisAgent:
 
         await agent.run_agent(week_label)
 
-        classify_calls = [
-            fc for fc in agent.function_call_log if fc["name"] == "classify_repos"
-        ]
+        classify_calls = [fc for fc in agent.function_call_log if fc["name"] == "classify_repos"]
         assert len(classify_calls) >= 1
 
     async def test_agent_returns_valid_analysis(
@@ -198,9 +192,7 @@ class TestAnalysisAgent:
 
         responses = [
             make_mock_genai_response(
-                function_calls=[
-                    {"name": "get_trending_repos", "args": {"since": "daily"}}
-                ]
+                function_calls=[{"name": "get_trending_repos", "args": {"since": "daily"}}]
             ),
             make_mock_genai_response(text=json.dumps(MOCK_ANALYSIS_OUTPUT)),
         ]
@@ -229,14 +221,10 @@ class TestAnalysisAgent:
 
         responses = [
             make_mock_genai_response(
-                function_calls=[
-                    {"name": "get_trending_repos", "args": {"since": "daily"}}
-                ]
+                function_calls=[{"name": "get_trending_repos", "args": {"since": "daily"}}]
             ),
             make_mock_genai_response(
-                function_calls=[
-                    {"name": "get_trending_repos", "args": {"since": "weekly"}}
-                ]
+                function_calls=[{"name": "get_trending_repos", "args": {"since": "weekly"}}]
             ),
             make_mock_genai_response(
                 function_calls=[
@@ -285,7 +273,6 @@ class TestAnalysisAgent:
         assert fc["name"] == "get_trending_repos"
         assert fc["args"]["since"] == "daily"
 
-
     async def test_agent_full_loop_sequence(
         self,
         agent_config: Config,
@@ -298,8 +285,7 @@ class TestAnalysisAgent:
         # MOCK_AGENT_FUNCTION_CALLS の各ターンを function_call レスポンスに変換し、
         # 最終ターンはテキスト（分析結果 JSON）で応答する
         responses = [
-            make_mock_genai_response(function_calls=[fc])
-            for fc in MOCK_AGENT_FUNCTION_CALLS
+            make_mock_genai_response(function_calls=[fc]) for fc in MOCK_AGENT_FUNCTION_CALLS
         ] + [
             make_mock_genai_response(text=json.dumps(MOCK_ANALYSIS_OUTPUT)),
         ]
@@ -342,9 +328,7 @@ class TestAnalysisAgentErrors:
         # 常に function call を返し続ける
         responses = [
             make_mock_genai_response(
-                function_calls=[
-                    {"name": "get_trending_repos", "args": {"since": "daily"}}
-                ]
+                function_calls=[{"name": "get_trending_repos", "args": {"since": "daily"}}]
             )
             for _ in range(5)
         ]
@@ -367,11 +351,7 @@ class TestAnalysisAgentErrors:
         _insert_sample_repos(db, sample_trending_repos)
 
         responses = [
-            make_mock_genai_response(
-                function_calls=[
-                    {"name": "nonexistent_function", "args": {}}
-                ]
-            ),
+            make_mock_genai_response(function_calls=[{"name": "nonexistent_function", "args": {}}]),
         ]
 
         agent = _make_agent(agent_config, db, responses)
@@ -440,9 +420,7 @@ class TestAnalysisAgentErrors:
 
         responses = [
             make_mock_genai_response(
-                function_calls=[
-                    {"name": "get_trending_repos", "args": {"since": "daily"}}
-                ]
+                function_calls=[{"name": "get_trending_repos", "args": {"since": "daily"}}]
             ),
             make_mock_genai_response(text=json.dumps(partial_output)),
         ]

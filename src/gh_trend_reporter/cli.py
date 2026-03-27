@@ -199,9 +199,7 @@ def status() -> None:
         detail_count = db.conn.execute("SELECT COUNT(*) FROM repo_details").fetchone()[0]
         analysis_count = db.conn.execute("SELECT COUNT(*) FROM weekly_analyses").fetchone()[0]
 
-        latest_row = db.conn.execute(
-            "SELECT MAX(collected_at) FROM trending_repos"
-        ).fetchone()
+        latest_row = db.conn.execute("SELECT MAX(collected_at) FROM trending_repos").fetchone()
         latest_date = latest_row[0] if latest_row and latest_row[0] else "N/A"
 
         click.echo("=== gh-trend-reporter status ===")

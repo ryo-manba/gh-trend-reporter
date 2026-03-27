@@ -121,9 +121,7 @@ def _build_tool_declarations() -> list[types.FunctionDeclaration]:
                             type="OBJECT",
                             properties={
                                 "name": types.Schema(type="STRING", description="リポジトリ名"),
-                                "description": types.Schema(
-                                    type="STRING", description="説明"
-                                ),
+                                "description": types.Schema(type="STRING", description="説明"),
                                 "language": types.Schema(
                                     type="STRING", description="プログラミング言語"
                                 ),
@@ -261,9 +259,7 @@ class AnalysisAgent:
                 for fc in function_calls:
                     fc_name = fc.name or ""
                     model_parts.append(
-                        types.Part.from_function_call(
-                            name=fc_name, args=dict(fc.args or {})
-                        )
+                        types.Part.from_function_call(name=fc_name, args=dict(fc.args or {}))
                     )
                 contents.append(types.Content(role="model", parts=model_parts))
 
@@ -272,13 +268,9 @@ class AnalysisAgent:
                 for fc in function_calls:
                     fc_name = fc.name or ""
                     result = await self._execute_function(fc_name, dict(fc.args or {}))
-                    self._function_call_log.append(
-                        {"name": fc_name, "args": dict(fc.args or {})}
-                    )
+                    self._function_call_log.append({"name": fc_name, "args": dict(fc.args or {})})
                     response_parts.append(
-                        types.Part.from_function_response(
-                            name=fc_name, response={"result": result}
-                        )
+                        types.Part.from_function_response(name=fc_name, response={"result": result})
                     )
                 contents.append(types.Content(role="user", parts=response_parts))
             else:
@@ -286,13 +278,9 @@ class AnalysisAgent:
                 text = response.text or ""
                 return self._parse_analysis(text, week_label)
 
-        raise AgentMaxTurnsError(
-            f"エージェントが最大ターン数({max_turns})に達しました"
-        )
+        raise AgentMaxTurnsError(f"エージェントが最大ターン数({max_turns})に達しました")
 
-    async def _execute_function(
-        self, name: str, args: dict[str, Any]
-    ) -> Any:
+    async def _execute_function(self, name: str, args: dict[str, Any]) -> Any:
         """Gemini が要求したファンクションコールをディスパッチ・実行する.
 
         Args:
@@ -344,9 +332,7 @@ class AnalysisAgent:
             ]
         return _repos_to_dicts(filtered[:limit])
 
-    async def _fn_get_repo_detail(
-        self, owner: str, repo: str, **_kwargs: Any
-    ) -> dict[str, Any]:
+    async def _fn_get_repo_detail(self, owner: str, repo: str, **_kwargs: Any) -> dict[str, Any]:
         """リポジトリ詳細を取得する（DB キャッシュ → GitHub API のフォールバック）.
 
         Args:
@@ -444,17 +430,13 @@ class AnalysisAgent:
         monday = datetime.strptime(week_label + "-1", "%G-W%V-%u").date()
         sunday = monday + timedelta(days=6)
 
-        categories = [
-            CategoryGroup(**cat) for cat in data.get("categories", [])
-        ]
+        categories = [CategoryGroup(**cat) for cat in data.get("categories", [])]
 
         return WeeklyAnalysis(
             week_label=week_label,
             period_start=monday,
             period_end=sunday,
-            total_repos_collected=sum(
-                len(cat.repos) for cat in categories
-            ),
+            total_repos_collected=sum(len(cat.repos) for cat in categories),
             top_languages=data.get("top_languages", []),
             categories=categories,
             highlights=data.get("highlights", []),
@@ -496,9 +478,7 @@ def _extract_json(text: str) -> str:
     return text.strip()
 
 
-def _classify_single_repo(
-    language: str, topics: list[str], name: str
-) -> str:
+def _classify_single_repo(language: str, topics: list[str], name: str) -> str:
     """単一リポジトリをキーワードマッチでカテゴリに分類する.
 
     言語・トピック・リポジトリ名を結合したテキストに対してキーワード検索を行い、

@@ -32,12 +32,8 @@ class RateLimiter:
     def _cleanup(self) -> None:
         """ウィンドウ外の古いタイムスタンプを除去する。"""
         now = time.monotonic()
-        self._minute_timestamps = [
-            t for t in self._minute_timestamps if now - t < 60.0
-        ]
-        self._day_timestamps = [
-            t for t in self._day_timestamps if now - t < 86400.0
-        ]
+        self._minute_timestamps = [t for t in self._minute_timestamps if now - t < 60.0]
+        self._day_timestamps = [t for t in self._day_timestamps if now - t < 86400.0]
 
     @property
     def remaining_per_minute(self) -> int:

@@ -179,11 +179,7 @@ class GitHubAPI:
             license=license_name,
             open_issues=repo_data.get("open_issues_count", 0),
             open_prs=0,
-            last_pushed=datetime.fromisoformat(
-                repo_data["pushed_at"].replace("Z", "+00:00")
-            ),
-            created_at=datetime.fromisoformat(
-                repo_data["created_at"].replace("Z", "+00:00")
-            ),
+            last_pushed=datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")),
+            created_at=datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00")),
             homepage=repo_data.get("homepage"),
         )

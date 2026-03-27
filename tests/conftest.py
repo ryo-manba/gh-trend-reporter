@@ -163,9 +163,7 @@ MOCK_ANALYSIS_OUTPUT: dict[str, Any] = {
     ],
     "highlights": ["AI エージェントフレームワークが急増"],
     "new_entries": ["new-org/new-repo"],
-    "rising_repos": [
-        {"name": "google/gemma", "stars_since": 1234, "reason": "Gemma 2 リリース"}
-    ],
+    "rising_repos": [{"name": "google/gemma", "stars_since": 1234, "reason": "Gemma 2 リリース"}],
     "week_over_week": "先週と比べて AI 関連が増加",
 }
 

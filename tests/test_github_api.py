@@ -65,9 +65,7 @@ class TestGitHubAPI:
         encoded = base64.b64encode(long_content.encode()).decode()
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.get.return_value = _make_response(
-            json_data={"content": encoded}
-        )
+        mock_client.get.return_value = _make_response(json_data={"content": encoded})
 
         api = GitHubAPI(client=mock_client)
         excerpt = await api.get_readme("google", "gemma", max_chars=500)
@@ -75,9 +73,7 @@ class TestGitHubAPI:
 
     async def test_get_rate_limit(self) -> None:
         """レート制限情報を取得"""
-        rate_data = {
-            "resources": {"core": {"limit": 5000, "remaining": 4999, "reset": 1700000000}}
-        }
+        rate_data = {"resources": {"core": {"limit": 5000, "remaining": 4999, "reset": 1700000000}}}
         mock_client = AsyncMock(spec=httpx.AsyncClient)
         mock_client.get.return_value = _make_response(json_data=rate_data)
 

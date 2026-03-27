@@ -41,7 +41,6 @@ def _make_trending_repo(**kwargs: Any) -> TrendingRepo:
 
 
 class TestFullPipeline:
-
     def test_collect_to_db(self, db: Database, daily_html: str) -> None:
         """scrape → DB 保存 → 読み出しの全体フロー"""
         collected_at = date(2025, 1, 15)
@@ -63,12 +62,20 @@ class TestFullPipeline:
         collected_at = date(2025, 1, 15)
         repos = [
             _make_trending_repo(
-                owner="google", name="gemma", language="Python",
-                stars=50000, stars_since=1234, collected_at=collected_at,
+                owner="google",
+                name="gemma",
+                language="Python",
+                stars=50000,
+                stars_since=1234,
+                collected_at=collected_at,
             ),
             _make_trending_repo(
-                owner="vercel", name="next.js", language="TypeScript",
-                stars=120000, stars_since=567, collected_at=collected_at,
+                owner="vercel",
+                name="next.js",
+                language="TypeScript",
+                stars=120000,
+                stars_since=567,
+                collected_at=collected_at,
             ),
         ]
         db.insert_trending_repos(repos)
@@ -113,11 +120,13 @@ class TestFullPipeline:
         week1_date = date(2025, 1, 8)
         week1_repos = [
             _make_trending_repo(
-                owner="old-org", name="old-repo",
+                owner="old-org",
+                name="old-repo",
                 collected_at=week1_date,
             ),
             _make_trending_repo(
-                owner="common-org", name="common-repo",
+                owner="common-org",
+                name="common-repo",
                 collected_at=week1_date,
             ),
         ]
@@ -127,11 +136,13 @@ class TestFullPipeline:
         week2_date = date(2025, 1, 15)
         week2_repos = [
             _make_trending_repo(
-                owner="common-org", name="common-repo",
+                owner="common-org",
+                name="common-repo",
                 collected_at=week2_date,
             ),
             _make_trending_repo(
-                owner="new-org", name="new-repo",
+                owner="new-org",
+                name="new-repo",
                 collected_at=week2_date,
             ),
         ]
@@ -150,8 +161,12 @@ class TestFullPipeline:
         collected_at = date(2025, 1, 15)
         repos = [
             _make_trending_repo(
-                owner="google", name="gemma", language="Python",
-                stars=50000, stars_since=1234, collected_at=collected_at,
+                owner="google",
+                name="gemma",
+                language="Python",
+                stars=50000,
+                stars_since=1234,
+                collected_at=collected_at,
             ),
         ]
         db.insert_trending_repos(repos)
@@ -163,9 +178,7 @@ class TestFullPipeline:
         for fc in MOCK_AGENT_FUNCTION_CALLS:
             mock_responses.append(make_mock_genai_response(function_calls=[fc]))
         # 最終ターン: テキストレスポンス（分析結果 JSON）
-        mock_responses.append(
-            make_mock_genai_response(text=json.dumps(MOCK_ANALYSIS_OUTPUT))
-        )
+        mock_responses.append(make_mock_genai_response(text=json.dumps(MOCK_ANALYSIS_OUTPUT)))
 
         mock_client = MagicMock()
         mock_generate = AsyncMock(side_effect=mock_responses)

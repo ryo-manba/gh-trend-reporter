@@ -153,9 +153,7 @@ class Database:
         self.conn.commit()
         return count
 
-    def get_repos_by_date(
-        self, target_date: date, since: str | None = None
-    ) -> list[TrendingRepo]:
+    def get_repos_by_date(self, target_date: date, since: str | None = None) -> list[TrendingRepo]:
         """指定日に収集されたリポジトリを取得する.
 
         Args:
@@ -189,9 +187,7 @@ class Database:
         ).fetchall()
         return [_row_to_trending_repo(row) for row in rows]
 
-    def get_previous_week_repos(
-        self, current_week: str, weeks_ago: int = 1
-    ) -> list[TrendingRepo]:
+    def get_previous_week_repos(self, current_week: str, weeks_ago: int = 1) -> list[TrendingRepo]:
         """指定週から N 週前のリポジトリ一覧を取得する.
 
         Args:
@@ -257,9 +253,7 @@ class Database:
         )
         self.conn.commit()
 
-    def get_repo_detail(
-        self, full_name: str, cache_ttl: int = 86400
-    ) -> RepoDetail | None:
+    def get_repo_detail(self, full_name: str, cache_ttl: int = 86400) -> RepoDetail | None:
         """キャッシュ有効期限内の RepoDetail を取得する.
 
         Args:

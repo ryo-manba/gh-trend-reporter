@@ -60,7 +60,6 @@ def _make_report(**kwargs: object) -> WeeklyReport:
 
 
 class TestReportGenerator:
-
     def test_render_complete_report(self) -> None:
         """完全な WeeklyReport から正しい Markdown を生成"""
         gen = ReportGenerator()

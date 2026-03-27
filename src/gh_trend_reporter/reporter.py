@@ -99,9 +99,7 @@ class ReportGenerator:
         if analysis.new_entries:
             lines.append("## 新登場リポジトリ")
             lines.append("")
-            lines.append(
-                "先週の Trending には登場せず、今週新たに Trending 入りしたリポジトリ:"
-            )
+            lines.append("先週の Trending には登場せず、今週新たに Trending 入りしたリポジトリ:")
             lines.append("")
             lines.append("| リポジトリ |")
             lines.append("|-----------|")
