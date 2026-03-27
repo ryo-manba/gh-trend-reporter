@@ -33,7 +33,7 @@ def _make_trending_repo(
         name=name,
         since=since,
         collected_at=collected_at,
-        **defaults,  # type: ignore[arg-type]
+        **defaults,
     )
 
 

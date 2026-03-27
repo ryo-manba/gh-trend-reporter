@@ -6,6 +6,7 @@ import base64
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock
 
 import httpx
@@ -20,7 +21,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 def _make_response(
     status_code: int = 200,
-    json_data: dict | None = None,
+    json_data: dict[str, Any] | None = None,
     headers: dict[str, str] | None = None,
 ) -> httpx.Response:
     return httpx.Response(
