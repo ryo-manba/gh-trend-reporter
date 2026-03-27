@@ -109,6 +109,47 @@ def sample_trending_repos() -> list[TrendingRepo]:
     ]
 
 
+MOCK_REPO_DETAIL: dict[str, Any] = {
+    "full_name": "google/gemma",
+    "description": "Open weights LLM",
+    "topics": ["llm", "ai", "machine-learning"],
+    "license": {"spdx_id": "Apache-2.0"},
+    "open_issues_count": 42,
+    "pushed_at": "2025-01-18T12:00:00Z",
+    "created_at": "2024-06-01T00:00:00Z",
+    "homepage": "https://ai.google.dev/gemma",
+}
+
+MOCK_README_CONTENT: str = (
+    "IyBHZW1tYQoKT3BlbiB3ZWlnaHRzIExMTSBieSBHb29nbGUu"  # Base64: "# Gemma\n\nOpen weights LLM by Google."
+)
+
+MOCK_AGENT_FUNCTION_CALLS: list[dict[str, Any]] = [
+    # Turn 1: get_trending_repos(since="daily")
+    {"name": "get_trending_repos", "args": {"since": "daily", "limit": 25}},
+    # Turn 2: get_trending_repos(since="weekly")
+    {"name": "get_trending_repos", "args": {"since": "weekly", "limit": 25}},
+    # Turn 3: get_repo_detail for top repo
+    {"name": "get_repo_detail", "args": {"owner": "google", "repo": "gemma"}},
+    # Turn 4: get_previous_week_trending
+    {"name": "get_previous_week_trending", "args": {"weeks_ago": 1}},
+    # Turn 5: classify_repos
+    {
+        "name": "classify_repos",
+        "args": {
+            "repos": [
+                {
+                    "name": "google/gemma",
+                    "description": "Open weights LLM",
+                    "language": "Python",
+                    "topics": ["llm", "ai"],
+                }
+            ]
+        },
+    },
+    # Turn 6: 最終分析 JSON 出力（Function Call なし — text response）
+]
+
 MOCK_ANALYSIS_OUTPUT: dict[str, Any] = {
     "top_languages": [
         {"language": "Python", "count": 12, "percentage": 24.0},
