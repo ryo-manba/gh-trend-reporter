@@ -1,4 +1,9 @@
-"""Markdown レポート生成"""
+"""Markdown 週次レポート生成モジュール.
+
+:class:`WeeklyReport` を受け取り、YAML フロントマター付きの
+Markdown ファイルとしてレンダリング・保存する。
+出力は GitHub や Zenn でそのまま閲覧可能な形式。
+"""
 
 from __future__ import annotations
 
@@ -12,13 +17,27 @@ logger = logging.getLogger(__name__)
 
 
 class ReportGenerator:
-    """WeeklyReport から Markdown レポートを生成する"""
+    """WeeklyReport から Markdown レポートを生成・保存する.
+
+    Args:
+        reports_dir: レポート出力先ディレクトリ。
+    """
 
     def __init__(self, *, reports_dir: Path | str = "./reports") -> None:
         self._reports_dir = Path(reports_dir)
 
     def render(self, report: WeeklyReport) -> str:
-        """WeeklyReport を Markdown 文字列にレンダリングする"""
+        """WeeklyReport を Markdown 文字列にレンダリングする.
+
+        YAML フロントマター、ハイライト、言語ランキング、カテゴリ分析、
+        新登場リポジトリ、先週比較の各セクションを生成する。
+
+        Args:
+            report: レンダリング対象のレポートデータ。
+
+        Returns:
+            完全な Markdown 文字列。
+        """
         analysis = report.analysis
         lines: list[str] = []
 
@@ -105,11 +124,27 @@ class ReportGenerator:
         return "\n".join(lines)
 
     def output_path(self, week_label: str) -> Path:
-        """出力ファイルパスを返す"""
+        """指定週ラベルの出力ファイルパスを返す.
+
+        Args:
+            week_label: ISO 週ラベル。
+
+        Returns:
+            ``{reports_dir}/{week_label}.md`` のパス。
+        """
         return self._reports_dir / f"{week_label}.md"
 
     def save(self, report: WeeklyReport) -> Path:
-        """レポートをファイルに保存する"""
+        """レポートを Markdown ファイルとして保存する.
+
+        出力ディレクトリが存在しない場合は自動作成する。
+
+        Args:
+            report: 保存するレポートデータ。
+
+        Returns:
+            書き込んだファイルのパス。
+        """
         content = self.render(report)
         path = self.output_path(report.analysis.week_label)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -123,7 +158,15 @@ class ReportGenerator:
         *,
         model: str = "gemini-2.5-flash",
     ) -> WeeklyReport:
-        """WeeklyAnalysis から WeeklyReport を構築する"""
+        """WeeklyAnalysis にメタ情報を付与して WeeklyReport を構築する.
+
+        Args:
+            analysis: 週次分析結果。
+            model: 使用した LLM モデル名。
+
+        Returns:
+            生成日時とモデル名を含む WeeklyReport。
+        """
         return WeeklyReport(
             analysis=analysis,
             generated_at=datetime.now(),

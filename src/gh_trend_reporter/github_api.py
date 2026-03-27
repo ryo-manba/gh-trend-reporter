@@ -1,4 +1,9 @@
-"""GitHub REST API クライアント"""
+"""GitHub REST API クライアント.
+
+リポジトリ詳細・README・レート制限情報の取得を提供する。
+``X-RateLimit-Remaining`` ヘッダーを監視し、枠が 0 になると
+:class:`RateLimitExceeded` を送出する。
+"""
 
 from __future__ import annotations
 
@@ -17,11 +22,15 @@ GITHUB_API_BASE = "https://api.github.com"
 
 
 class GitHubAPIError(Exception):
-    """GitHub API エラー"""
+    """GitHub API 関連エラーの基底クラス."""
 
 
 class RateLimitExceeded(GitHubAPIError):
-    """レート制限超過"""
+    """GitHub API レート制限超過エラー.
+
+    Attributes:
+        reset_at: レート制限がリセットされる日時。
+    """
 
     def __init__(self, reset_at: datetime) -> None:
         self.reset_at = reset_at
@@ -29,7 +38,12 @@ class RateLimitExceeded(GitHubAPIError):
 
 
 class GitHubAPI:
-    """GitHub REST API クライアント"""
+    """GitHub REST API の非同期クライアント.
+
+    Args:
+        token: GitHub Personal Access Token。None の場合は未認証（60 req/h）。
+        client: 外部から注入する httpx クライアント。None で内部生成。
+    """
 
     def __init__(
         self,
@@ -58,6 +72,7 @@ class GitHubAPI:
         return self._client
 
     async def close(self) -> None:
+        """内部で生成した HTTP クライアントを閉じる。"""
         if self._owns_client and self._client is not None:
             await self._client.aclose()
             self._client = None
@@ -70,7 +85,18 @@ class GitHubAPI:
             raise RateLimitExceeded(reset_at)
 
     async def get_repo(self, owner: str, repo: str) -> dict[str, Any] | None:
-        """リポジトリ情報を取得する"""
+        """リポジトリのメタデータを取得する.
+
+        Args:
+            owner: リポジトリオーナー。
+            repo: リポジトリ名。
+
+        Returns:
+            API レスポンスの辞書。404 の場合は None。
+
+        Raises:
+            RateLimitExceeded: レート制限に到達した場合。
+        """
         client = await self._get_client()
         response = await client.get(f"/repos/{owner}/{repo}")
 
@@ -83,7 +109,19 @@ class GitHubAPI:
         return response.json()  # type: ignore[no-any-return]
 
     async def get_readme(self, owner: str, repo: str, max_chars: int = 500) -> str:
-        """README を取得して冒頭 max_chars 文字を返す"""
+        """README を取得して冒頭を返す.
+
+        Base64 エンコードされた README コンテンツをデコードし、
+        先頭 ``max_chars`` 文字に切り詰めて返す。
+
+        Args:
+            owner: リポジトリオーナー。
+            repo: リポジトリ名。
+            max_chars: 返す最大文字数（デフォルト: 500）。
+
+        Returns:
+            README の冒頭テキスト。README が存在しない場合は空文字列。
+        """
         client = await self._get_client()
         response = await client.get(f"/repos/{owner}/{repo}/readme")
 
@@ -100,14 +138,29 @@ class GitHubAPI:
         return content[:max_chars]
 
     async def get_rate_limit(self) -> dict[str, Any]:
-        """レート制限情報を取得する"""
+        """現在の GitHub API レート制限状況を取得する.
+
+        Returns:
+            ``/rate_limit`` エンドポイントのレスポンス辞書。
+        """
         client = await self._get_client()
         response = await client.get("/rate_limit")
         response.raise_for_status()
         return response.json()  # type: ignore[no-any-return]
 
     async def get_repo_detail(self, owner: str, repo: str) -> RepoDetail | None:
-        """リポジトリ詳細を取得して RepoDetail モデルに変換する"""
+        """リポジトリ情報と README を取得して RepoDetail に変換する.
+
+        ``get_repo()`` と ``get_readme()`` を順次呼び出し、
+        結果を :class:`RepoDetail` モデルに統合する。
+
+        Args:
+            owner: リポジトリオーナー。
+            repo: リポジトリ名。
+
+        Returns:
+            変換された RepoDetail。リポジトリが存在しない場合は None。
+        """
         repo_data = await self.get_repo(owner, repo)
         if repo_data is None:
             return None

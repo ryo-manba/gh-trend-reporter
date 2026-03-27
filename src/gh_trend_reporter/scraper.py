@@ -1,4 +1,9 @@
-"""GitHub Trending ページスクレイピング"""
+"""GitHub Trending ページのスクレイピングモジュール.
+
+``https://github.com/trending`` の HTML を取得・解析し、
+各リポジトリ行から名前・スター数・言語などを抽出する。
+429 応答やタイムアウトに対する指数バックオフリトライを内蔵。
+"""
 
 from __future__ import annotations
 
@@ -18,11 +23,17 @@ TRENDING_URL = "https://github.com/trending"
 
 
 class ScraperError(Exception):
-    """スクレイパーのエラー"""
+    """スクレイピング処理で発生するエラーの基底クラス."""
 
 
 class TrendingScraper:
-    """GitHub Trending ページのスクレイパー"""
+    """GitHub Trending ページの非同期スクレイパー.
+
+    Args:
+        client: 外部から注入する httpx クライアント。None の場合は内部で生成。
+        interval: リクエスト間のインターバル（秒）。
+        max_retries: リトライ最大回数。
+    """
 
     def __init__(
         self,
@@ -46,13 +57,22 @@ class TrendingScraper:
         return self._client
 
     async def close(self) -> None:
+        """内部で生成した HTTP クライアントを閉じる。"""
         if self._owns_client and self._client is not None:
             await self._client.aclose()
             self._client = None
 
     @staticmethod
     def build_url(since: str = "daily", language: str | None = None) -> str:
-        """Trending ページの URL を構築する"""
+        """Trending ページの URL をクエリパラメータ付きで構築する.
+
+        Args:
+            since: 期間フィルタ（``"daily"`` または ``"weekly"``）。
+            language: プログラミング言語フィルタ。None で全言語。
+
+        Returns:
+            完全な URL 文字列。
+        """
         url = TRENDING_URL
         params: list[str] = []
         if language:
@@ -63,7 +83,17 @@ class TrendingScraper:
         return url
 
     async def fetch_html(self, url: str) -> str:
-        """URL から HTML を取得する（リトライ付き）"""
+        """URL から HTML を取得する（指数バックオフリトライ付き）.
+
+        Args:
+            url: 取得対象の URL。
+
+        Returns:
+            レスポンスの HTML 文字列。
+
+        Raises:
+            ScraperError: 全リトライ失敗時、または 429/タイムアウト以外の HTTP エラー時。
+        """
         client = await self._get_client()
         last_error: Exception | None = None
         for attempt in range(self._max_retries):
@@ -89,7 +119,19 @@ class TrendingScraper:
     def parse_trending_page(
         html: str, since: str, collected_at: date | None = None
     ) -> list[TrendingRepo]:
-        """HTML をパースして TrendingRepo のリストを返す"""
+        """Trending ページの HTML をパースしてリポジトリ一覧を返す.
+
+        ``article.Box-row`` 要素を走査し、各行から情報を抽出する。
+        パースに失敗した行はスキップして警告ログを出力する。
+
+        Args:
+            html: GitHub Trending ページの HTML 文字列。
+            since: 期間ラベル（``"daily"`` または ``"weekly"``）。
+            collected_at: 収集日。None の場合は今日の日付を使用。
+
+        Returns:
+            パース成功した TrendingRepo のリスト。空ページの場合は空リスト。
+        """
         if collected_at is None:
             collected_at = date.today()
 
@@ -117,14 +159,35 @@ class TrendingScraper:
         language: str | None = None,
         collected_at: date | None = None,
     ) -> list[TrendingRepo]:
-        """Trending ページをスクレイピングする"""
+        """Trending ページの取得からパースまでを一括実行する.
+
+        Args:
+            since: 期間フィルタ。
+            language: 言語フィルタ。
+            collected_at: 収集日（テスト用に外部指定可能）。
+
+        Returns:
+            TrendingRepo のリスト。
+        """
         url = self.build_url(since=since, language=language)
         html = await self.fetch_html(url)
         return self.parse_trending_page(html, since=since, collected_at=collected_at)
 
 
 def _parse_row(row: Tag, since: str, collected_at: date) -> TrendingRepo:
-    """article.Box-row 要素から TrendingRepo を抽出する"""
+    """単一の ``article.Box-row`` 要素から TrendingRepo を抽出する.
+
+    Args:
+        row: BeautifulSoup の Tag オブジェクト。
+        since: 期間ラベル。
+        collected_at: 収集日。
+
+    Returns:
+        抽出された TrendingRepo。
+
+    Raises:
+        ValueError: リポジトリ名が見つからない、または不正な形式の場合。
+    """
     # リポジトリ名
     h2 = row.select_one("h2 a")
     if h2 is None:

@@ -1,4 +1,13 @@
-"""Click CLI エントリーポイント"""
+"""Click ベースの CLI エントリーポイント.
+
+``gtr`` コマンドとして以下のサブコマンドを提供する:
+
+- ``collect``: GitHub Trending データの収集
+- ``analyze``: Gemini エージェントによるトレンド分析
+- ``report``: Markdown レポートの生成
+- ``run``: collect → analyze → report の一括実行
+- ``status``: DB 統計情報の表示
+"""
 
 from __future__ import annotations
 
@@ -16,7 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 def _current_week_label() -> str:
-    """現在の週ラベルを返す（例: 2025-W03）"""
+    """現在の ISO 週ラベルを返す.
+
+    Returns:
+        ``"YYYY-WNN"`` 形式の文字列（例: ``"2025-W03"``）。
+    """
     today = date.today()
     return f"{today.isocalendar().year}-W{today.isocalendar().week:02d}"
 
@@ -41,7 +54,12 @@ def collect(language: str | None, since: str | None) -> None:
 
 
 async def _collect(language: str | None = None, since: str | None = None) -> None:
-    """collect コマンドの非同期実装"""
+    """collect コマンドの非同期実装.
+
+    Args:
+        language: 言語フィルタ。None で全言語。
+        since: 期間フィルタ。None で daily + weekly の両方を収集。
+    """
     from gh_trend_reporter.scraper import TrendingScraper
 
     config = Config.load()
@@ -73,7 +91,11 @@ def analyze(week: str | None) -> None:
 
 
 async def _analyze(week: str | None = None) -> None:
-    """analyze コマンドの非同期実装"""
+    """analyze コマンドの非同期実装.
+
+    Args:
+        week: 分析対象の週ラベル。None で今週を対象。
+    """
     from gh_trend_reporter.agent import AnalysisAgent
     from gh_trend_reporter.github_api import GitHubAPI
 
@@ -111,7 +133,12 @@ def report(week: str | None, fmt: str) -> None:
 
 
 def _report_sync(week: str | None = None, fmt: str = "md") -> None:
-    """report コマンドの同期実装"""
+    """report コマンドの同期実装.
+
+    Args:
+        week: レポート対象の週ラベル。None で今週を対象。
+        fmt: 出力フォーマット（現在は ``"md"`` のみ対応）。
+    """
     from gh_trend_reporter.reporter import ReportGenerator
 
     config = Config.load()
@@ -145,7 +172,12 @@ def run(language: str | None, week: str | None) -> None:
 
 
 async def _run(language: str | None = None, week: str | None = None) -> None:
-    """run コマンドの非同期実装"""
+    """run コマンドの非同期実装（collect → analyze → report）.
+
+    Args:
+        language: 言語フィルタ。
+        week: 対象の週ラベル。
+    """
     await _collect(language=language)
     await _analyze(week=week)
     _report_sync(week=week)
