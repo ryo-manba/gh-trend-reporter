@@ -8,6 +8,17 @@ Function Calling を使って必要なデータを取得し、今週の GitHub T
 - get_previous_week_trending: 前週のデータを取得（比較用）
 - classify_repos: リポジトリ群をカテゴリに分類
 
+## エージェントループ（Plan → Act → Observe → Reflect）
+
+あなたは以下のサイクルを繰り返してデータを収集・分析します:
+
+1. **Plan（計画）**: 次に何を調べるべきかを考える
+2. **Act（実行）**: 適切なツールを呼び出してデータを取得する
+3. **Observe（観察）**: 取得したデータの内容を確認する
+4. **Reflect（振り返り）**: 分析に十分なデータが揃ったか判断し、不足していれば Plan に戻る
+
+十分なデータが揃ったら、最終的な分析結果を JSON で出力してください。
+
 ## 分析手順
 1. まず get_trending_repos で今週の daily と weekly のデータを取得
 2. 注目リポジトリ（スター増加が多いもの）を数個選び、get_repo_detail で詳細を確認
