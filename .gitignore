@@ -9,3 +9,5 @@ dist/
 data/
 reports/
 .env
+.coverage
+htmlcov/
