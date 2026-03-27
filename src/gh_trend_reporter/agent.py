@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -158,6 +158,7 @@ class AnalysisAgent:
         self._client = client or genai.Client(api_key=config.gemini_api_key or "")
         self._tool_declarations = _build_tool_declarations()
         self._function_call_log: list[dict[str, Any]] = []
+        self._week_label: str = ""
 
     @property
     def function_call_log(self) -> list[dict[str, Any]]:
@@ -188,6 +189,7 @@ class AnalysisAgent:
         )
 
         self._function_call_log.clear()
+        self._week_label = week_label
 
         for turn in range(max_turns):
             logger.info("Agent turn %d/%d", turn + 1, max_turns)
@@ -260,19 +262,13 @@ class AnalysisAgent:
         **_kwargs: Any,
     ) -> list[dict[str, Any]]:
         """DB から trending repos を取得する"""
-        repos = self._db.get_repos_by_week(self._current_week_label())
+        repos = self._db.get_repos_by_week(self._week_label)
         filtered = [r for r in repos if r.since == since]
         if language:
             filtered = [
                 r for r in filtered if r.language and r.language.lower() == language.lower()
             ]
         return _repos_to_dicts(filtered[:limit])
-
-    def _current_week_label(self) -> str:
-        """現在の週ラベルを取得する"""
-        today = date.today()
-        iso = today.isocalendar()
-        return f"{iso[0]}-W{iso[1]:02d}"
 
     async def _fn_get_repo_detail(
         self, owner: str, repo: str, **_kwargs: Any
@@ -295,8 +291,7 @@ class AnalysisAgent:
         self, weeks_ago: int = 1, **_kwargs: Any
     ) -> list[dict[str, Any]]:
         """前週の trending repos を取得する"""
-        week_label = self._current_week_label()
-        repos = self._db.get_previous_week_repos(week_label, weeks_ago)
+        repos = self._db.get_previous_week_repos(self._week_label, weeks_ago)
         return _repos_to_dicts(repos)
 
     async def _fn_classify_repos(
