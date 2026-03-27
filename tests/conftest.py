@@ -120,9 +120,8 @@ MOCK_REPO_DETAIL: dict[str, Any] = {
     "homepage": "https://ai.google.dev/gemma",
 }
 
-MOCK_README_CONTENT: str = (
-    "IyBHZW1tYQoKT3BlbiB3ZWlnaHRzIExMTSBieSBHb29nbGUu"  # Base64: "# Gemma\n\nOpen weights LLM by Google."
-)
+# Base64: "# Gemma\n\nOpen weights LLM by Google."
+MOCK_README_CONTENT: str = "IyBHZW1tYQoKT3BlbiB3ZWlnaHRzIExMTSBieSBHb29nbGUu"
 
 MOCK_AGENT_FUNCTION_CALLS: list[dict[str, Any]] = [
     # Turn 1: get_trending_repos(since="daily")
