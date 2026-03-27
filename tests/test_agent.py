@@ -18,7 +18,11 @@ from gh_trend_reporter.agent import (
 from gh_trend_reporter.config import Config
 from gh_trend_reporter.database import Database
 from gh_trend_reporter.models import TrendingRepo, WeeklyAnalysis
-from tests.conftest import MOCK_ANALYSIS_OUTPUT, make_mock_genai_response
+from tests.conftest import (
+    MOCK_AGENT_FUNCTION_CALLS,
+    MOCK_ANALYSIS_OUTPUT,
+    make_mock_genai_response,
+)
 
 
 def _insert_sample_repos(db: Database, repos: list[TrendingRepo]) -> None:
@@ -280,6 +284,46 @@ class TestAnalysisAgent:
         fc = agent.function_call_log[0]
         assert fc["name"] == "get_trending_repos"
         assert fc["args"]["since"] == "daily"
+
+
+    async def test_agent_full_loop_sequence(
+        self,
+        agent_config: Config,
+        db: Database,
+        sample_trending_repos: list[TrendingRepo],
+    ) -> None:
+        """エージェントが Plan→Act→Observe→Reflect の完全シーケンスを実行する"""
+        _insert_sample_repos(db, sample_trending_repos)
+
+        # MOCK_AGENT_FUNCTION_CALLS の各ターンを function_call レスポンスに変換し、
+        # 最終ターンはテキスト（分析結果 JSON）で応答する
+        responses = [
+            make_mock_genai_response(function_calls=[fc])
+            for fc in MOCK_AGENT_FUNCTION_CALLS
+        ] + [
+            make_mock_genai_response(text=json.dumps(MOCK_ANALYSIS_OUTPUT)),
+        ]
+
+        agent = _make_agent(agent_config, db, responses)
+        today = date.today()
+        iso = today.isocalendar()
+        week_label = f"{iso[0]}-W{iso[1]:02d}"
+
+        result = await agent.run_agent(week_label)
+
+        # 全5ターンの function call が実行されたことを検証
+        assert len(agent.function_call_log) == len(MOCK_AGENT_FUNCTION_CALLS)
+
+        # 呼び出し順序を検証
+        expected_names = [fc["name"] for fc in MOCK_AGENT_FUNCTION_CALLS]
+        actual_names = [fc["name"] for fc in agent.function_call_log]
+        assert actual_names == expected_names
+
+        # 最終結果が有効な WeeklyAnalysis であることを検証
+        assert isinstance(result, WeeklyAnalysis)
+        assert result.week_label == week_label
+        assert len(result.categories) > 0
+        assert len(result.highlights) > 0
 
 
 class TestAnalysisAgentErrors:
