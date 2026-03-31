@@ -10,6 +10,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 
 @dataclass
 class Config:
@@ -41,6 +43,7 @@ class Config:
         Returns:
             環境変数の値で初期化された Config インスタンス。
         """
+        load_dotenv()
         return cls(
             db_path=Path(os.environ.get("GTR_DB_PATH", "./data/trends.db")),
             reports_dir=Path(os.environ.get("GTR_REPORTS_DIR", "./reports")),

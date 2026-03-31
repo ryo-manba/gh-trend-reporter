@@ -276,7 +276,29 @@ class AnalysisAgent:
             else:
                 # テキスト応答 → 分析完了
                 text = response.text or ""
-                return self._parse_analysis(text, week_label)
+                try:
+                    return self._parse_analysis(text, week_label)
+                except AgentError:
+                    # JSON パースに失敗した場合、JSON で再出力するよう促す
+                    logger.warning("Agent returned non-JSON text, requesting JSON retry")
+                    contents.append(
+                        types.Content(
+                            role="model",
+                            parts=[types.Part.from_text(text=text)],
+                        )
+                    )
+                    contents.append(
+                        types.Content(
+                            role="user",
+                            parts=[
+                                types.Part.from_text(
+                                    text="回答をJSON形式のみで再出力してください。"
+                                    "マークダウンのコードブロック(```json ... ```)で囲んでください。"
+                                )
+                            ],
+                        )
+                    )
+                    continue
 
         raise AgentMaxTurnsError(f"エージェントが最大ターン数({max_turns})に達しました")
 
