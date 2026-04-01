@@ -175,7 +175,9 @@ def _build_openai_tool_declarations() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "get_repo_detail",
-                "description": "特定リポジトリの詳細情報（トピック、README冒頭、Issue数等）を取得する",
+                "description": (
+                    "特定リポジトリの詳細情報（トピック、README冒頭、Issue数等）を取得する"
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -218,7 +220,10 @@ def _build_openai_tool_declarations() -> list[dict[str, Any]]:
                                 "properties": {
                                     "name": {"type": "string", "description": "リポジトリ名"},
                                     "description": {"type": "string", "description": "説明"},
-                                    "language": {"type": "string", "description": "プログラミング言語"},
+                                    "language": {
+                                        "type": "string",
+                                        "description": "プログラミング言語",
+                                    },
                                     "topics": {
                                         "type": "array",
                                         "description": "トピックタグ",
@@ -233,6 +238,33 @@ def _build_openai_tool_declarations() -> list[dict[str, Any]]:
             },
         },
     ]
+
+
+def _build_json_retry_prompt() -> str:
+    """JSON 再出力を促すプロンプトを構築する."""
+    example = json.dumps(
+        {
+            "top_languages": [
+                {"language": "Python", "count": 5, "percentage": 35.7}
+            ],
+            "categories": [
+                {
+                    "category": "AI/機械学習",
+                    "repos": [{"name": "owner/repo", "description": "説明"}],
+                    "summary_ja": "要約",
+                }
+            ],
+            "highlights": ["ポイント1"],
+            "new_entries": [],
+            "rising_repos": [],
+            "week_over_week": "比較",
+        },
+        ensure_ascii=False,
+    )
+    return (
+        "分析結果をJSON形式のみで出力してください。説明文は不要です。"
+        f"以下のフォーマットに従ってください:\n```json\n{example}\n```"
+    )
 
 
 def _repos_to_dicts(repos: list[TrendingRepo]) -> list[dict[str, Any]]:
@@ -398,7 +430,7 @@ class AnalysisAgent:
                             parts=[
                                 types.Part.from_text(
                                     text="回答をJSON形式のみで再出力してください。"
-                                    "マークダウンのコードブロック(```json ... ```)で囲んでください。"
+                                    "コードブロック(```json```)で囲んでください。"
                                 )
                             ],
                         )
@@ -413,12 +445,17 @@ class AnalysisAgent:
         """Ollama ネイティブ API を使ったエージェントループ."""
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"今週（{week_label}）のGitHub Trendingデータを分析してください。"},
+            {
+                "role": "user",
+                "content": f"今週（{week_label}）のGitHub Trendingデータを分析してください。",
+            },
         ]
 
         async with httpx.AsyncClient(timeout=300.0) as client:
             for turn in range(max_turns):
-                logger.info("Agent turn %d/%d (ollama/%s)", turn + 1, max_turns, self._config.ollama_model)
+                logger.info(
+                    "Agent turn %d/%d (ollama/%s)", turn + 1, max_turns, self._config.ollama_model
+                )
 
                 payload: dict[str, Any] = {
                     "model": self._config.ollama_model,
@@ -445,28 +482,24 @@ class AnalysisAgent:
                             args = json.loads(args)
                         result = await self._execute_function(name, args)
                         self._function_call_log.append({"name": name, "args": args})
-                        messages.append({
-                            "role": "tool",
-                            "content": json.dumps(result, ensure_ascii=False, default=str),
-                        })
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "content": json.dumps(result, ensure_ascii=False, default=str),
+                            }
+                        )
                 else:
                     text = msg.get("content", "")
                     try:
                         return self._parse_analysis(text, week_label)
                     except AgentError:
                         logger.warning("Agent returned non-JSON text, requesting JSON retry")
-                        messages.append({
-                            "role": "user",
-                            "content": (
-                                "分析結果をJSON形式のみで出力してください。説明文は不要です。"
-                                "以下のフォーマットに従ってください:\n"
-                                "```json\n"
-                                '{"top_languages": [{"language": "Python", "count": 5, "percentage": 35.7}], '
-                                '"categories": [{"category": "AI/機械学習", "repos": [{"name": "owner/repo", "description": "説明"}], "summary_ja": "要約"}], '
-                                '"highlights": ["ポイント1"], "new_entries": [], "rising_repos": [], "week_over_week": "比較"}\n'
-                                "```"
-                            ),
-                        })
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": _build_json_retry_prompt(),
+                            }
+                        )
                         continue
 
         raise AgentMaxTurnsError(f"エージェントが最大ターン数({max_turns})に達しました")
@@ -642,7 +675,9 @@ class AnalysisAgent:
                 if isinstance(repo, dict) and "/" not in repo.get("name", "/"):
                     repo["name"] = name_to_full.get(repo["name"], repo["name"])
             categories.append(
-                CategoryGroup(category=cat["category"], repos=repos, summary_ja=cat.get("summary_ja", ""))
+                CategoryGroup(
+                    category=cat["category"], repos=repos, summary_ja=cat.get("summary_ja", "")
+                )
             )
 
         return WeeklyAnalysis(
