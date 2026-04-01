@@ -89,10 +89,11 @@ class ReportGenerator:
                 lines.append("")
                 if cat.repos:
                     lines.append("**注目リポジトリ**")
-                    lines.append("| リポジトリ |")
-                    lines.append("|-----------|")
-                    for repo_name in cat.repos:
-                        lines.append(f"| {repo_name} |")
+                    lines.append("| リポジトリ | 説明 |")
+                    lines.append("|-----------|------|")
+                    for repo in cat.repos:
+                        link = f"[{repo.name}](https://github.com/{repo.name})"
+                        lines.append(f"| {link} | {repo.description} |")
                     lines.append("")
 
         # New entries
@@ -104,7 +105,7 @@ class ReportGenerator:
             lines.append("| リポジトリ |")
             lines.append("|-----------|")
             for entry in analysis.new_entries:
-                lines.append(f"| {entry} |")
+                lines.append(f"| [{entry}](https://github.com/{entry}) |")
             lines.append("")
 
         # Week-over-week comparison
@@ -132,6 +133,11 @@ class ReportGenerator:
         """
         return self._reports_dir / f"{week_label}.md"
 
+    def output_path_with_model(self, week_label: str, model: str) -> Path:
+        """モデル名付きの出力ファイルパスを返す."""
+        safe_model = model.replace(":", "-").replace("/", "-")
+        return self._reports_dir / f"{week_label}-{safe_model}.md"
+
     def save(self, report: WeeklyReport) -> Path:
         """レポートを Markdown ファイルとして保存する.
 
@@ -144,7 +150,7 @@ class ReportGenerator:
             書き込んだファイルのパス。
         """
         content = self.render(report)
-        path = self.output_path(report.analysis.week_label)
+        path = self.output_path_with_model(report.analysis.week_label, report.model)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
         logger.info("Report saved to %s", path)

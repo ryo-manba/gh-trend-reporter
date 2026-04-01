@@ -4,9 +4,12 @@ Pydantic v2 を使用した型安全なデータモデル群。
 データ収集パイプラインの各段階で使用される構造体を定義する。
 """
 
-from datetime import date, datetime
+from __future__ import annotations
 
-from pydantic import BaseModel
+from datetime import date, datetime
+from typing import Any
+
+from pydantic import BaseModel, model_validator
 
 
 class TrendingRepo(BaseModel):
@@ -68,18 +71,39 @@ class RepoDetail(BaseModel):
     homepage: str | None
 
 
+class CategoryRepo(BaseModel):
+    """カテゴリ内の個別リポジトリ情報.
+
+    Attributes:
+        name: リポジトリの ``full_name``（例: ``"owner/repo"``）。
+        description: リポジトリの概要（一言説明）。
+    """
+
+    name: str
+    description: str = ""
+
+
 class CategoryGroup(BaseModel):
     """エージェントによる技術カテゴリ分類結果.
 
     Attributes:
         category: カテゴリ名（例: ``"AI/機械学習"``、``"Web開発"``）。
-        repos: カテゴリに属するリポジトリの ``full_name`` リスト。
+        repos: カテゴリに属するリポジトリのリスト。
         summary_ja: カテゴリの動向を日本語で要約したテキスト。
     """
 
     category: str
-    repos: list[str]
+    repos: list[CategoryRepo]
     summary_ja: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_repos(cls, values: Any) -> Any:
+        """旧形式（list[str]）の repos を CategoryRepo に変換する."""
+        repos = values.get("repos", [])
+        if repos and isinstance(repos[0], str):
+            values["repos"] = [{"name": r, "description": ""} for r in repos]
+        return values
 
 
 class WeeklyAnalysis(BaseModel):

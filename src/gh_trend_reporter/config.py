@@ -36,6 +36,10 @@ class Config:
     github_token: str | None = field(default=None, repr=False)
     gemini_api_key: str | None = field(default=None, repr=False)
 
+    llm_provider: str = "gemini"
+    ollama_model: str = "qwen2.5:14b"
+    ollama_base_url: str = "http://localhost:11434/v1"
+
     @classmethod
     def load(cls) -> Config:
         """環境変数から設定を読み込んでインスタンスを生成する.
@@ -52,4 +56,7 @@ class Config:
             agent_max_turns=int(os.environ.get("GTR_AGENT_MAX_TURNS", "10")),
             github_token=os.environ.get("GITHUB_TOKEN"),
             gemini_api_key=os.environ.get("GEMINI_API_KEY"),
+            llm_provider=os.environ.get("LLM_PROVIDER", "gemini"),
+            ollama_model=os.environ.get("OLLAMA_MODEL", "qwen2.5:14b"),
+            ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
         )

@@ -11,6 +11,7 @@ from click.testing import CliRunner
 from gh_trend_reporter.cli import main
 from gh_trend_reporter.models import (
     CategoryGroup,
+    CategoryRepo,
     TrendingRepo,
     WeeklyAnalysis,
 )
@@ -42,7 +43,7 @@ def _make_analysis(week_label: str = "2025-W03") -> WeeklyAnalysis:
         categories=[
             CategoryGroup(
                 category="AI/機械学習",
-                repos=["google/gemma"],
+                repos=[CategoryRepo(name="google/gemma", description="軽量オープンLLM")],
                 summary_ja="LLM 関連",
             )
         ],
@@ -123,7 +124,9 @@ class TestCLI:
             patch("gh_trend_reporter.cli.Config") as mock_config_cls,
             patch("gh_trend_reporter.cli.Database") as mock_db_cls,
         ):
-            mock_config_cls.load.return_value = MagicMock(db_path=":memory:", reports_dir=tmp_path)
+            mock_config_cls.load.return_value = MagicMock(
+                db_path=":memory:", reports_dir=tmp_path, llm_provider="gemini"
+            )
             mock_db = MagicMock()
             mock_db.get_weekly_analysis.return_value = analysis
             mock_db_cls.return_value = mock_db
@@ -154,6 +157,7 @@ class TestCLI:
                 github_cache_ttl=86400,
                 agent_max_turns=10,
                 gemini_api_key="test",
+                llm_provider="gemini",
             )
             mock_db = MagicMock()
             mock_db.insert_trending_repos.return_value = 1

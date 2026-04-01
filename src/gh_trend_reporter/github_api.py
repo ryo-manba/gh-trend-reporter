@@ -67,6 +67,7 @@ class GitHubAPI:
                 base_url=GITHUB_API_BASE,
                 headers=headers,
                 timeout=30.0,
+                follow_redirects=True,
             )
             self._owns_client = True
         return self._client

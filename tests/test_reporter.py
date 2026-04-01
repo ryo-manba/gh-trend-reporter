@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from gh_trend_reporter.models import CategoryGroup, WeeklyAnalysis, WeeklyReport
+from gh_trend_reporter.models import CategoryGroup, CategoryRepo, WeeklyAnalysis, WeeklyReport
 from gh_trend_reporter.reporter import ReportGenerator
 
 
@@ -23,12 +23,17 @@ def _make_analysis(**kwargs: object) -> WeeklyAnalysis:
         "categories": [
             CategoryGroup(
                 category="AI/機械学習",
-                repos=["google/gemma", "meta/llama"],
+                repos=[
+                    CategoryRepo(name="google/gemma", description="軽量オープンLLM"),
+                    CategoryRepo(name="meta/llama", description="Metaの大規模言語モデル"),
+                ],
                 summary_ja="LLM 関連が活発",
             ),
             CategoryGroup(
                 category="Web開発",
-                repos=["vercel/next.js"],
+                repos=[
+                    CategoryRepo(name="vercel/next.js", description="Reactフレームワーク"),
+                ],
                 summary_ja="React フレームワークが人気",
             ),
         ],
@@ -115,8 +120,8 @@ class TestReportGenerator:
         report = _make_report()
         md = gen.render(report)
 
-        assert "| new-org/new-repo |" in md
-        assert "| another/fresh-repo |" in md
+        assert "[new-org/new-repo](https://github.com/new-org/new-repo)" in md
+        assert "[another/fresh-repo](https://github.com/another/fresh-repo)" in md
 
     def test_output_file_naming(self, tmp_path: object) -> None:
         """出力ファイル名が {year}-W{week}.md 形式"""

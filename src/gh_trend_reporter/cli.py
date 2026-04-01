@@ -156,7 +156,8 @@ def _report_sync(week: str | None = None, fmt: str = "md") -> None:
             sys.exit(1)
 
         generator = ReportGenerator(reports_dir=config.reports_dir)
-        weekly_report = ReportGenerator.build_report(analysis, model="gemini-2.5-flash")
+        model_name = "gemini-2.5-flash" if config.llm_provider == "gemini" else config.ollama_model
+        weekly_report = ReportGenerator.build_report(analysis, model=model_name)
         path = generator.save(weekly_report)
         click.echo(f"Report saved to {path}")
     finally:

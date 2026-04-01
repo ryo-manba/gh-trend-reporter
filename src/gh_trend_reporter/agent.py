@@ -1,7 +1,8 @@
-"""Gemini Function Calling を用いたトレンド分析エージェント.
+"""LLM Function Calling を用いたトレンド分析エージェント.
 
 Plan → Act → Observe → Reflect のエージェントループを実装する。
-Gemini API の Function Calling 機能を使い、以下のツール関数を自律的に呼び出す:
+Gemini API または Ollama (OpenAI 互換) の Function Calling 機能を使い、
+以下のツール関数を自律的に呼び出す:
 
 - ``get_trending_repos``: DB から Trending データを取得
 - ``get_repo_detail``: GitHub API でリポジトリ詳細を取得（キャッシュ優先）
@@ -20,6 +21,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
+import httpx
 from google import genai
 from google.genai import types
 
@@ -140,6 +142,99 @@ def _build_tool_declarations() -> list[types.FunctionDeclaration]:
     ]
 
 
+def _build_openai_tool_declarations() -> list[dict[str, Any]]:
+    """OpenAI 互換 API 用のツール宣言リストを構築する."""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_trending_repos",
+                "description": "指定期間のGitHub Trendingリポジトリ一覧をDBから取得する",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "since": {
+                            "type": "string",
+                            "enum": ["daily", "weekly"],
+                            "description": "期間フィルタ",
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "プログラミング言語フィルタ（空文字で全言語）",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "取得件数（デフォルト25）",
+                        },
+                    },
+                    "required": ["since"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_repo_detail",
+                "description": "特定リポジトリの詳細情報（トピック、README冒頭、Issue数等）を取得する",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "リポジトリオーナー"},
+                        "repo": {"type": "string", "description": "リポジトリ名"},
+                    },
+                    "required": ["owner", "repo"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_previous_week_trending",
+                "description": "前週のTrendingデータをDBから取得し、今週との比較に使う",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "weeks_ago": {
+                            "type": "integer",
+                            "description": "何週間前のデータか（デフォルト1）",
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "classify_repos",
+                "description": "リポジトリ群を技術カテゴリに分類する",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "repos": {
+                            "type": "array",
+                            "description": "分類対象のリポジトリ一覧",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string", "description": "リポジトリ名"},
+                                    "description": {"type": "string", "description": "説明"},
+                                    "language": {"type": "string", "description": "プログラミング言語"},
+                                    "topics": {
+                                        "type": "array",
+                                        "description": "トピックタグ",
+                                        "items": {"type": "string"},
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "required": ["repos"],
+                },
+            },
+        },
+    ]
+
+
 def _repos_to_dicts(repos: list[TrendingRepo]) -> list[dict[str, Any]]:
     """TrendingRepo のリストを JSON シリアライズ可能な辞書リストに変換する.
 
@@ -166,10 +261,11 @@ def _repos_to_dicts(repos: list[TrendingRepo]) -> list[dict[str, Any]]:
 
 
 class AnalysisAgent:
-    """Gemini Function Calling を使ったトレンド分析エージェント.
+    """LLM Function Calling を使ったトレンド分析エージェント.
 
-    Plan → Act → Observe → Reflect のループで、Gemini が必要なツール関数を
+    Plan → Act → Observe → Reflect のループで、LLM が必要なツール関数を
     自律的に選択・呼び出し、収集したデータに基づいてトレンド分析を行う。
+    Gemini API と Ollama (OpenAI 互換) の両方をサポートする。
 
     Args:
         config: アプリケーション設定。
@@ -191,11 +287,20 @@ class AnalysisAgent:
         self._config = config
         self._db = db
         self._github_api = github_api
-        self._rate_limiter = rate_limiter or RateLimiter()
-        self._client = client or genai.Client(api_key=config.gemini_api_key or "")
-        self._tool_declarations = _build_tool_declarations()
+        self._provider = config.llm_provider
         self._function_call_log: list[dict[str, Any]] = []
         self._week_label: str = ""
+
+        if self._provider == "ollama":
+            self._ollama_base_url = config.ollama_base_url.rstrip("/v1").rstrip("/")
+            self._ollama_tools = _build_openai_tool_declarations()
+            self._rate_limiter = rate_limiter or RateLimiter(
+                max_requests_per_minute=999, max_requests_per_day=99999
+            )
+        else:
+            self._rate_limiter = rate_limiter or RateLimiter()
+            self._client = client or genai.Client(api_key=config.gemini_api_key or "")
+            self._tool_declarations = _build_tool_declarations()
 
     @property
     def function_call_log(self) -> list[dict[str, Any]]:
@@ -204,9 +309,6 @@ class AnalysisAgent:
 
     async def run_agent(self, week_label: str) -> WeeklyAnalysis:
         """Plan → Act → Observe → Reflect のエージェントループを実行する.
-
-        Gemini にシステムプロンプトとツール定義を渡し、テキスト応答（分析完了）が
-        返されるまで Function Calling の実行と結果フィードバックを繰り返す。
 
         Args:
             week_label: 分析対象の ISO 週ラベル（例: ``"2025-W03"``）。
@@ -218,9 +320,19 @@ class AnalysisAgent:
             AgentMaxTurnsError: 最大ターン数以内に分析が完了しなかった場合。
             AgentError: JSON パース失敗や不明な関数呼び出しが発生した場合。
         """
+        self._function_call_log.clear()
+        self._week_label = week_label
         system_prompt = _load_system_prompt()
         max_turns = self._config.agent_max_turns
 
+        if self._provider == "ollama":
+            return await self._run_agent_openai(system_prompt, week_label, max_turns)
+        return await self._run_agent_gemini(system_prompt, week_label, max_turns)
+
+    async def _run_agent_gemini(
+        self, system_prompt: str, week_label: str, max_turns: int
+    ) -> WeeklyAnalysis:
+        """Gemini API を使ったエージェントループ."""
         contents: list[types.Content] = [
             types.Content(
                 role="user",
@@ -239,9 +351,6 @@ class AnalysisAgent:
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
 
-        self._function_call_log.clear()
-        self._week_label = week_label
-
         for turn in range(max_turns):
             logger.info("Agent turn %d/%d", turn + 1, max_turns)
 
@@ -254,7 +363,6 @@ class AnalysisAgent:
 
             function_calls = response.function_calls
             if function_calls:
-                # モデルの応答（function call を含む）を会話履歴に追加
                 model_parts: list[types.Part] = []
                 for fc in function_calls:
                     fc_name = fc.name or ""
@@ -263,7 +371,6 @@ class AnalysisAgent:
                     )
                 contents.append(types.Content(role="model", parts=model_parts))
 
-                # 各 function call を実行し結果を追加
                 response_parts: list[types.Part] = []
                 for fc in function_calls:
                     fc_name = fc.name or ""
@@ -274,12 +381,10 @@ class AnalysisAgent:
                     )
                 contents.append(types.Content(role="user", parts=response_parts))
             else:
-                # テキスト応答 → 分析完了
                 text = response.text or ""
                 try:
                     return self._parse_analysis(text, week_label)
                 except AgentError:
-                    # JSON パースに失敗した場合、JSON で再出力するよう促す
                     logger.warning("Agent returned non-JSON text, requesting JSON retry")
                     contents.append(
                         types.Content(
@@ -299,6 +404,70 @@ class AnalysisAgent:
                         )
                     )
                     continue
+
+        raise AgentMaxTurnsError(f"エージェントが最大ターン数({max_turns})に達しました")
+
+    async def _run_agent_openai(
+        self, system_prompt: str, week_label: str, max_turns: int
+    ) -> WeeklyAnalysis:
+        """Ollama ネイティブ API を使ったエージェントループ."""
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"今週（{week_label}）のGitHub Trendingデータを分析してください。"},
+        ]
+
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            for turn in range(max_turns):
+                logger.info("Agent turn %d/%d (ollama/%s)", turn + 1, max_turns, self._config.ollama_model)
+
+                payload: dict[str, Any] = {
+                    "model": self._config.ollama_model,
+                    "messages": messages,
+                    "tools": self._ollama_tools,
+                    "stream": False,
+                }
+                resp = await client.post(
+                    f"{self._ollama_base_url}/api/chat",
+                    json=payload,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                msg = data.get("message", {})
+                messages.append(msg)
+
+                tool_calls = msg.get("tool_calls")
+                if tool_calls:
+                    for tc in tool_calls:
+                        func = tc.get("function", {})
+                        name = func.get("name", "")
+                        args = func.get("arguments", {})
+                        if isinstance(args, str):
+                            args = json.loads(args)
+                        result = await self._execute_function(name, args)
+                        self._function_call_log.append({"name": name, "args": args})
+                        messages.append({
+                            "role": "tool",
+                            "content": json.dumps(result, ensure_ascii=False, default=str),
+                        })
+                else:
+                    text = msg.get("content", "")
+                    try:
+                        return self._parse_analysis(text, week_label)
+                    except AgentError:
+                        logger.warning("Agent returned non-JSON text, requesting JSON retry")
+                        messages.append({
+                            "role": "user",
+                            "content": (
+                                "分析結果をJSON形式のみで出力してください。説明文は不要です。"
+                                "以下のフォーマットに従ってください:\n"
+                                "```json\n"
+                                '{"top_languages": [{"language": "Python", "count": 5, "percentage": 35.7}], '
+                                '"categories": [{"category": "AI/機械学習", "repos": [{"name": "owner/repo", "description": "説明"}], "summary_ja": "要約"}], '
+                                '"highlights": ["ポイント1"], "new_entries": [], "rising_repos": [], "week_over_week": "比較"}\n'
+                                "```"
+                            ),
+                        })
+                        continue
 
         raise AgentMaxTurnsError(f"エージェントが最大ターン数({max_turns})に達しました")
 
@@ -407,16 +576,17 @@ class AnalysisAgent:
         Returns:
             カテゴリ別に集約された辞書リスト。
         """
-        categories: dict[str, list[str]] = {}
+        categories: dict[str, list[dict[str, str]]] = {}
         for repo in repos:
             lang = repo.get("language", "") or ""
             topics = repo.get("topics", []) or []
             name = repo.get("name", "")
+            description = repo.get("description", "") or ""
 
             category = _classify_single_repo(lang, topics, name)
             if category not in categories:
                 categories[category] = []
-            categories[category].append(name)
+            categories[category].append({"name": name, "description": description})
 
         return [
             {"category": cat, "repos": cat_repos, "summary_ja": f"{cat}関連のリポジトリ"}
@@ -452,7 +622,28 @@ class AnalysisAgent:
         monday = datetime.strptime(week_label + "-1", "%G-W%V-%u").date()
         sunday = monday + timedelta(days=6)
 
-        categories = [CategoryGroup(**cat) for cat in data.get("categories", [])]
+        # DB から repo name → full_name のマッピングを構築
+        # LLM が "repo" だけ返した場合に "owner/repo" に補完する
+        db_repos = self._db.get_repos_by_week(week_label)
+        name_to_full: dict[str, str] = {}
+        for r in db_repos:
+            name_to_full[r.name] = f"{r.owner}/{r.name}"
+            name_to_full[f"{r.owner}/{r.name}"] = f"{r.owner}/{r.name}"
+
+        raw_categories = data.get("categories", [])
+        categories: list[CategoryGroup] = []
+        for cat in raw_categories:
+            repos = cat.get("repos", [])
+            # 旧形式 (list[str]) を新形式 (list[dict]) に変換
+            if repos and isinstance(repos[0], str):
+                repos = [{"name": r, "description": ""} for r in repos]
+            # repo name を owner/repo 形式に補完
+            for repo in repos:
+                if isinstance(repo, dict) and "/" not in repo.get("name", "/"):
+                    repo["name"] = name_to_full.get(repo["name"], repo["name"])
+            categories.append(
+                CategoryGroup(category=cat["category"], repos=repos, summary_ja=cat.get("summary_ja", ""))
+            )
 
         return WeeklyAnalysis(
             week_label=week_label,

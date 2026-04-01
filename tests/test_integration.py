@@ -12,6 +12,7 @@ from gh_trend_reporter.config import Config
 from gh_trend_reporter.database import Database
 from gh_trend_reporter.models import (
     CategoryGroup,
+    CategoryRepo,
     TrendingRepo,
     WeeklyAnalysis,
 )
@@ -93,7 +94,7 @@ class TestFullPipeline:
             categories=[
                 CategoryGroup(
                     category="AI/機械学習",
-                    repos=["google/gemma"],
+                    repos=[CategoryRepo(name="google/gemma", description="軽量オープンLLM")],
                     summary_ja="LLM 関連",
                 ),
             ],

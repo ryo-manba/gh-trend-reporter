@@ -7,6 +7,7 @@ from datetime import date, datetime
 from gh_trend_reporter.database import Database
 from gh_trend_reporter.models import (
     CategoryGroup,
+    CategoryRepo,
     RepoDetail,
     TrendingRepo,
     WeeklyAnalysis,
@@ -163,7 +164,7 @@ class TestDatabase:
             categories=[
                 CategoryGroup(
                     category="AI/ML",
-                    repos=["google/gemma"],
+                    repos=[CategoryRepo(name="google/gemma", description="軽量オープンLLM")],
                     summary_ja="LLM 関連が活発",
                 )
             ],

@@ -368,11 +368,13 @@ class TestAnalysisAgentErrors:
         db: Database,
         sample_trending_repos: list[TrendingRepo],
     ) -> None:
-        """不正な JSON 出力 → AgentError"""
+        """不正な JSON 出力が繰り返されると最大ターン数で AgentMaxTurnsError"""
         _insert_sample_repos(db, sample_trending_repos)
 
+        agent_config.agent_max_turns = 2
         responses = [
             make_mock_genai_response(text="This is not valid JSON at all"),
+            make_mock_genai_response(text="Still not valid JSON"),
         ]
 
         agent = _make_agent(agent_config, db, responses)
@@ -380,7 +382,7 @@ class TestAnalysisAgentErrors:
         iso = today.isocalendar()
         week_label = f"{iso[0]}-W{iso[1]:02d}"
 
-        with pytest.raises(AgentError, match="Invalid JSON"):
+        with pytest.raises(AgentMaxTurnsError):
             await agent.run_agent(week_label)
 
     async def test_agent_partial_data(
