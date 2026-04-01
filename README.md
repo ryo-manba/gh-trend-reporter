@@ -34,6 +34,32 @@ Gemini API と Ollama（ローカル LLM）の両方に対応。
 - **Analysis Agent** — LLM が Function Calling で必要なデータを自律的に取得・分析
 - **Report Generator** — 分析結果を Markdown レポートとして出力
 
+## Function Calling エージェント
+
+全データをプロンプトに詰め込むのではなく、LLM が Function Calling で「次に何を調べるか」を自分で判断します。
+
+```
+LLM: 「まず weekly の一覧をください」
+  → get_trending_repos(since="weekly")
+LLM: 「この 3 つの詳細を見たい」
+  → get_repo_detail("bytedance", "deer-flow")
+LLM: 「前週と比較したい」
+  → get_previous_week_trending()
+LLM: 「分析完了」
+  → JSON で最終結果を出力
+```
+
+エージェントが使えるツールは 4 つです:
+
+| ツール | 目的 |
+|--------|------|
+| `get_trending_repos` | 今週の Trending 一覧を DB から取得 |
+| `get_repo_detail` | 特定リポジトリの詳細（トピック、README 等）を取得 |
+| `get_previous_week_trending` | 前週データを取得して差分を比較 |
+| `classify_repos` | リポジトリ群をカテゴリに分類 |
+
+注目リポジトリだけを `get_repo_detail` で深掘りするため、トークン効率が良く、分析の柔軟性も高くなります。
+
 ## セットアップ
 
 ```bash
