@@ -244,9 +244,7 @@ def _build_json_retry_prompt() -> str:
     """JSON 再出力を促すプロンプトを構築する."""
     example = json.dumps(
         {
-            "top_languages": [
-                {"language": "Python", "count": 5, "percentage": 35.7}
-            ],
+            "top_languages": [{"language": "Python", "count": 5, "percentage": 35.7}],
             "categories": [
                 {
                     "category": "AI/機械学習",
